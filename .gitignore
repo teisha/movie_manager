@@ -1,2 +1,4 @@
 plex_env
 config
+
+__pycache__
