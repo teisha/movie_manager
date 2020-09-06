@@ -47,9 +47,9 @@ class AudioBookManager:
         # print(book["narrated_by"])
         # print(book["filename"])
         filename = get_orig_filename(book)
-        if not os.path.isfile(filename):
-            print("File does not exist", filename)
-            return
+        if not os.path(filename).exists:
+            print('Source file does not exist!')
+            raise Exception('File Not Found')
 
         print("AUDIO INFO FOR : ", filename)
         audio = MP3(filename)
@@ -181,6 +181,9 @@ class AudioBookManager:
         # book["filename"]), author, book["filename"] = filename: str, author: str, title: str
         orig = get_orig_filename(book)
         print('Moving file ', orig)
+        if not os.path(orig).exists:
+            print('Source file does not exist!')
+            raise Exception('File Not Found')
         dest_path = get_projected_destination_path(book)
         # "{}{}/{}/".format(config.dest_path,author, book_title  , filename )
         dest_file = "{}{}.mp3".format(dest_path, book['filename'] )

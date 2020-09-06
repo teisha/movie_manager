@@ -17,6 +17,7 @@ class Processor:
         audio_runner = manager.AudioBookManager()
         all_books = audio_runner.load_books()
         books_copied = []
+        books_errored = []
 
         for book in all_books:
             print('*****************',book['title'],'**************************')
@@ -24,8 +25,11 @@ class Processor:
             filename = "{}{}.mp3".format(projected_destination, book['filename'] )
             print("Looking for: ", filename)
             if not os.path.isfile(filename):
-                books_copied.append(filename)
-                audio_runner.process_book(book)
+                try:
+                    audio_runner.process_book(book)
+                    books_copied.append(filename)
+                except:
+                    books_errored.append(filename)
             else:
                 print("BOOK EXISTS: ", filename)  
         print(' ---------------------------------------------------------- ')
@@ -33,6 +37,10 @@ class Processor:
         print(" There were {} books copied into the Plex folder: ".format(len(books_copied)))                 
         for file_destination in books_copied:
             print(file_destination)
+        print(" ---------   ")
+        print(" Errors occurred with the following files: ")
+        for file_destination in books_errored:
+            print(file_destination)        
 
 
 
