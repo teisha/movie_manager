@@ -2,3 +2,5 @@ plex_env
 config
 
 __pycache__
+
+log.out

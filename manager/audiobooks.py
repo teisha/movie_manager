@@ -47,7 +47,7 @@ class AudioBookManager:
         # print(book["narrated_by"])
         # print(book["filename"])
         filename = get_orig_filename(book)
-        if not os.path(filename).exists:
+        if not os.path.exists(filename):
             print('Source file does not exist!')
             raise Exception('File Not Found')
 
@@ -181,7 +181,7 @@ class AudioBookManager:
         # book["filename"]), author, book["filename"] = filename: str, author: str, title: str
         orig = get_orig_filename(book)
         print('Moving file ', orig)
-        if not os.path(orig).exists:
+        if not os.path.exists(orig):
             print('Source file does not exist!')
             raise Exception('File Not Found')
         dest_path = get_projected_destination_path(book)
@@ -192,7 +192,10 @@ class AudioBookManager:
         shutil.copy(orig, dest_file)
 
 def get_orig_filename(book: dict):
-    return "{}{}.mp3".format(config.origin_path,book["filename"])
+    print(config.origin_path)
+    filename = "{}{}.mp3".format(config.origin_path,book["filename"])
+    print(filename)
+    return filename
 
 def get_author(book: dict):
     return book["author"].replace(', The Great Courses','') 
@@ -207,10 +210,12 @@ def get_projected_destination_path(book):
 if __name__ == "__main__":
     audioManager = AudioBookManager()
     all_books = audioManager.load_books()
-    for book_title in [book['title'] for book in all_books]:
-        print('*****************',book_title,'**************************')
-        audioManager.process_book(book_title)
-    # audioManager.process_book('Altered Carbon')
+    # for book_title in [book['title'] for book in all_books]:
+    #     print('*****************',book_title,'**************************')
+    #     audioManager.process_book(book_title)
+    book_to_get = 'Understanding Japan A Cultural History'
+    book_to_proces = next( (book for book in all_books if book["filename"] ==book_to_get ), None )
+    audioManager.process_book(book_to_proces)
 
 
 
