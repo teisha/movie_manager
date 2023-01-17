@@ -1,4 +1,4 @@
-plex_env
+venv/*
 config
 
 __pycache__
