@@ -1,12 +1,16 @@
 import json
 import os
 import shutil
+import re
 import math
 import datetime
 import mutagen
 from mutagen.mp3 import MP3
+from mutagen.mp4 import MP4
 from mutagen.id3 import ID3, TIT2
 from mutagen.easyid3 import EasyID3
+from mutagen.easymp4 import EasyMP4, EasyMP4Tags
+
 
 
 import sys
@@ -15,11 +19,13 @@ import importlib
 from importlib import machinery 
 loader = importlib.machinery.SourceFileLoader('config', 'config/conf.py')
 config = loader.load_module('config')
-from audio_file_conf import keysToGet 
+import audio_file_conf # import keysToGet 
 
-import pythoncom
-from win32com.propsys import propsys, pscon
-from win32com.shell import shellcon
+#  These libraries only work on windows
+#  I don't see that they were adding anything...?
+# import pythoncom
+# from win32com.propsys import propsys, pscon
+# from win32com.shell import shellcon
 
 
 
@@ -52,7 +58,7 @@ class AudioBookManager:
             raise Exception('File Not Found')
 
         print("AUDIO INFO FOR : ", filename)
-        audio = MP3(filename)
+        audio = MP4(filename)
 
         print(audio.info.__dict__)
         print(audio.info.bitrate)
@@ -60,7 +66,9 @@ class AudioBookManager:
         # print(audio_id3.keys())
         print("ID3 TAG INFO: ")
         # print(EasyID3.valid_keys.keys())
-        audio_id3 = EasyID3(filename)
+    
+        audio_id3 = EasyMP4(filename)
+        # ['title', 'album', 'artist', 'albumartist', 'date', 'comment', 'description', 'genre', 'copyright', 'tracknumber']
         author = get_author(book)
         # release_date: datetime = None
         # try:
@@ -74,8 +82,10 @@ class AudioBookManager:
             audio_id3["genre"] = [u"Audiobook", book["genre"] ]
         except:            
             audio_id3["genre"] = [u"Audiobook"]
-        audio_id3["performer"] = book["narrated_by"]
-        audio_id3["author"] = author
+        audio_id3.RegisterTextKey("performer", book["narrated_by"])
+
+        # audio_id3["performer"] = book["narrated_by"]
+        audio_id3["artist"] = author
         if 'The Great Courses' in book['author']:
             audio_id3['artist'] = author
             audio_id3['albumartist'] = author
@@ -87,8 +97,10 @@ class AudioBookManager:
         try:
             audio_id3['language'] = book["language"]
         except:
-            pass
-        audio_id3['asin'] = book["asin"]
+            audio_id3.RegisterTextKey("language", book["language"])
+        
+        audio_id3.RegisterTextKey("asin", book["asin"])
+        # audio_id3['asin'] = book["asin"]
         audio.pprint()
         # audio_id3['length'] = math.floor(audio.info.length )
         audio_id3.save()
@@ -156,26 +168,28 @@ class AudioBookManager:
 # System.FileName:  Agincourt.mp3
 # System.FileOwner:  DESKTOP-KI6MHU3\laima  
 
-    def get_windows_sys_props(self, filename):
-        print("WIN32COM.PROPSYS FILE PROPERTIES: ")
-        pk = propsys.PSGetPropertyKeyFromName("System.Keywords")
-        # get property store for a given shell item (here a file)
-        #  MAKE SURE YOU USE THE RIGHT SLASHES HERE:
-        ps = propsys.SHGetPropertyStoreFromParsingName(filename.replace('/','\\'))
-#  build an array of string type PROPVARIANT
-# newValue = propsys.PROPVARIANTType(["hello", "world"], pythoncom.VT_VECTOR | pythoncom.VT_BSTR)
 
-# # write property
-# ps.SetValue(pk, newValue)
-# ps.Commit()
-        # read & print existing (or not) property value, System.Keywords type is an array of string
-        title = ps.GetValue(pscon.PKEY_Title).GetValue()
-        print (title)
-        print("System.Audio.Format", ps.GetValue(propsys.PSGetPropertyKeyFromName("System.Audio.Format")).GetValue())
-        # keywords = ps.GetValue(pk).GetValue()
-        # print(keywords)
-        for keyname in keysToGet:
-            print("{}: ".format(keyname), ps.GetValue(propsys.PSGetPropertyKeyFromName(keyname)).GetValue())
+# Removing all code in windows
+#     def get_windows_sys_props(self, filename):
+#         print("WIN32COM.PROPSYS FILE PROPERTIES: ")
+#         pk = propsys.PSGetPropertyKeyFromName("System.Keywords")
+#         # get property store for a given shell item (here a file)
+#         #  MAKE SURE YOU USE THE RIGHT SLASHES HERE:
+#         ps = propsys.SHGetPropertyStoreFromParsingName(filename.replace('/','\\'))
+# #  build an array of string type PROPVARIANT
+# # newValue = propsys.PROPVARIANTType(["hello", "world"], pythoncom.VT_VECTOR | pythoncom.VT_BSTR)
+
+# # # write property
+# # ps.SetValue(pk, newValue)
+# # ps.Commit()
+#         # read & print existing (or not) property value, System.Keywords type is an array of string
+#         title = ps.GetValue(pscon.PKEY_Title).GetValue()
+#         print (title)
+#         print("System.Audio.Format", ps.GetValue(propsys.PSGetPropertyKeyFromName("System.Audio.Format")).GetValue())
+#         # keywords = ps.GetValue(pk).GetValue()
+#         # print(keywords)
+#         for keyname in audio_file_conf.keysToGet:
+#             print("{}: ".format(keyname), ps.GetValue(propsys.PSGetPropertyKeyFromName(keyname)).GetValue())
         
     def move_file_to_desination(self, book):
         # book["filename"]), author, book["filename"] = filename: str, author: str, title: str
@@ -186,23 +200,34 @@ class AudioBookManager:
             raise Exception('File Not Found')
         dest_path = get_projected_destination_path(book)
         # "{}{}/{}/".format(config.dest_path,author, book_title  , filename )
-        dest_file = "{}{}.mp3".format(dest_path, book['filename'] )
+        dest_file = "{}{}.m4b".format(dest_path, book['filename'] )
         print('Copy file to ', dest_file)
+
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-        shutil.copy(orig, dest_file)
+        print(os.path.dirname(dest_path), os.listdir(os.path.dirname(dest_path)) )
+        shutil.copyfile(orig, dest_file)
+
+        pdf_file = orig.replace('.m4b','.pdf')
+        if os.path.exists(pdf_file):
+            dest_pdf = "{}{}.pdf".format(dest_path, book['filename'] )
+            print("Copying companion pdf file:: {} to {}".format(pdf_file, dest_pdf))
+            shutil.copyfile(pdf_file, dest_pdf)
+       
 
 def get_orig_filename(book: dict):
     print(config.origin_path)
-    filename = "{}{}.mp3".format(config.origin_path,book["filename"])
+    filename = "{}{}.m4b".format(config.origin_path,book["filename"])
     print(filename)
     return filename
 
 def get_author(book: dict):
-    return book["author"].replace(', The Great Courses','') 
+    return book["author"].replace(', The Great Courses','').replace('/',' and ').rstrip('.') 
+def get_scrubbed_title(book: dict):
+    return re.sub('[:!?"\\\',\*]',"", book["title"]).replace('- ','').rstrip('.') 
 
 def get_projected_destination_path(book):
     filename = book["filename"]
-    book_title = book["filename"].replace(':','')
+    book_title = get_scrubbed_title(book)
     author = get_author(book)
     dest_path = "{}{}/{}/".format(config.dest_path,author, book_title  , filename )
     return dest_path

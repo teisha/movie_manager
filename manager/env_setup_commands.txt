@@ -1,3 +1,5 @@
+python3 -m venv venv
+venv/bin/activate
 venv/bin/python -m pip install mutagen
 venv/bin/python -m pip install pypiwin32
 venv/bin/python -m pip freeze > requirements.txt
