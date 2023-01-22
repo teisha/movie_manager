@@ -1,6 +1,8 @@
 venv/*
 config/*
 !config/.keep
+out/*
+!out/run_20230121.txt
 
 __pycache__
 
